@@ -63,19 +63,35 @@ Run `python force_push_scanner.py -h` for full help.
 
 ## FAQs
 
-#### What is a Force Push?
+### What is a Force Push?
 
-A force push occurs when developers force a change in the current commit's HEAD ref, effectively overwriting commit history. This action is often done when a developer accidentally commits data containing a mistake, like hard-coded credentials. For more details, see [Sharon's blog post](https://trufflesecurity.com/blog/guest-post-how-i-scanned-all-of-github-s-oops-commits-for-leaked-secrets) and git's documentation on [force pushes](https://git-scm.com/docs/git-push#Documentation/git-push.txt---force).
+A force push (`git push --force`) makes the remote branch pointer move to exactly where your local branch pointer is, even if it means the remote branch no longer includes commits it previously had in its history. It essentially tells the remote to forget its old history for that branch and use yours instead. Any commits that were only reachable through the remote's old history now become unreachable within the repository (sometimes called "dangling commits"). Your local Git might eventually clean these up, but remote services like GitHub often keep them around for a while longer according to their own rules. This action is often done when a developer accidentally commits data containing a mistake, like hard-coded credentials. For more details, see [Sharon's blog post](https://trufflesecurity.com/blog/guest-post-how-i-scanned-all-of-github-s-oops-commits-for-leaked-secrets) and git's documentation on [force pushes](https://git-scm.com/docs/git-push#Documentation/git-push.txt---force).
 
-#### What is the GHArchive?
+### Does this dataset contain *all* Force Push events on GitHub?
+
+**tl;dr:** No. This dataset focuses specifically on **Zero-Commit Force Push Events**, which we believe represent the most likely cases where secrets were accidentally pushed and then attempted to be removed.
+
+#### Why focus only on Zero-Commit Force Pushes?
+
+1. **Zero-Commit Force Pushes often indicate secret removal**  
+   Developers who push secrets by accident frequently reset their history to a point before the mistake, then force push to remove the exposed data. These types of pushes typically show up as push events that modify the `HEAD` but contain zero commits. Our research indicates that this pattern is strongly correlated with attempts to delete sensitive content.
+
+2. **Not all Force Pushes are detectable from GH Archive alone**  
+   A force push is a low-level git operation commonly used in many workflows, including rebasing and cleaning up branches. Identifying every type of force push would require cloning each repository and inspecting its git history. This approach is not practical at the scale of GitHub and is outside the scope of this project.
+
+#### What is an example of a Force Push that is not included?
+
+Consider a scenario where a developer pushes a secret, then realizes the mistake and resets the branch to an earlier state. If they add new, clean commits before force pushing, the resulting `PushEvent` will include one or more commits. This example would not be captured because our dataset only includes push events with zero commits.
+
+### What is the GHArchive?
 
 The GH Archive is a public dataset of *all* public GitHub activity. It's a great resource for security researchers and developers to analyze and understand the security landscape of the GitHub ecosystem. It's publicly available on BigQuery, but querying the entire dataset is expensive ($170/query). We trimmed the GH Archive dataset to only include force push commits.
 
-#### Why not host the Force Push Commits DB publicly?
+### Why not host the Force Push Commits DB publicly?
 
 We gate large downloads behind a form to deter abuse; the public BigQuery dataset remains open to all.
 
-#### Dataset Updates
+### Dataset Updates
 
 The SQLite3 Database and BigQuery Table are updated every day at 2 PM EST with the previous day's data. 
 
