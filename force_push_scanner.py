@@ -72,7 +72,7 @@ def run(cmd: List[str], cwd: Path | None = None) -> str:
 
 
 def scan_with_trufflehog(repo_path: Path, since_commit: str, branch: str) -> List[dict]:
-    """Run trufflehog in git mode, returning the parsed JSON findings."""
+    """TruffleHog ko git mode mein run karo, parsed JSON findings return karo."""
     try:
         stdout = run(
             [
@@ -94,34 +94,34 @@ def scan_with_trufflehog(repo_path: Path, since_commit: str, branch: str) -> Lis
                 findings.append(json.loads(line))
         return findings
     except RunCmdError as err:
-        print(f"[!] trufflehog execution failed: {err} — skipping this repository")
+        print(f"[!] trufflehog execution fail ho gaya: {err} — is repository ko skip kar rahe hain")
         return []
         
 
-# Utility: extract year from Unix epoch INT.
+# Utility: Unix epoch INT se year extract karo
 def to_year(date_val) -> str:  # type: ignore[override]
-    """Return the four-digit year (YYYY) from *date_val* which can be an int (epoch)"""
+    """*date_val* se four-digit year (YYYY) return karo jo int (epoch) ho sakta hai"""
     return _dt.datetime.fromtimestamp(int(date_val), tz=timezone.utc).strftime("%Y")
 
 _SHA_RE = re.compile(r"^[0-9a-f]{7,40}$")
 
 ############################################################
-# Phase 1: Gather data from SQLite3 (default) or user-supplied CSV
+# Phase 1: SQLite3 (default) ya user-supplied CSV se data gather karo
 ############################################################
 
-# Column names expected from SQLite3 / CSV export
+# SQLite3 / CSV export se expected column names
 _EXPECTED_FIELDS = {"repo_org","repo_name", "before", "timestamp"}
 
 
 def _validate_row(input_org: str, row: dict, idx: int) -> tuple[str, str, int | str]:
-    """Validate that *row* contains the required columns and return the tuple.
+    """Validate karo ki *row* mein required columns hain aur tuple return karo.
 
-    Raises ``ValueError`` on validation failure so callers can abort early.
+    Validation failure pe ``ValueError`` raise karta hai taki callers jaldi abort kar saken.
     """
 
     missing = _EXPECTED_FIELDS - row.keys()
     if missing:
-        raise ValueError(f"Row {idx} is missing fields: {', '.join(sorted(missing))}")
+        raise ValueError(f"Row {idx} mein ye fields missing hain: {', '.join(sorted(missing))}")
 
     repo_org = str(row["repo_org"]).strip()
     repo_name = str(row["repo_name"]).strip()
@@ -129,25 +129,25 @@ def _validate_row(input_org: str, row: dict, idx: int) -> tuple[str, str, int | 
     ts = row["timestamp"]
 
     if not repo_org:
-        raise ValueError(f"Row {idx} – 'repo_org' is empty")
+        raise ValueError(f"Row {idx} – 'repo_org' empty hai")
     if repo_org != input_org:
-        raise ValueError(f"Row {idx} – 'repo_org' does not match 'input_org': {repo_org} != {input_org}")
+        raise ValueError(f"Row {idx} – 'repo_org' 'input_org' se match nahi kar raha: {repo_org} != {input_org}")
     if not repo_name:
-        raise ValueError(f"Row {idx} – 'repo_name' is empty")
+        raise ValueError(f"Row {idx} – 'repo_name' empty hai")
     if not _SHA_RE.fullmatch(before):
-        raise ValueError(f"Row {idx} – 'before' does not look like a commit SHA")
+        raise ValueError(f"Row {idx} – 'before' commit SHA jaisa nahi lag raha")
 
-    # BigQuery exports numeric INT64 as str when using CSV, accommodate both.
+    # BigQuery CSV use karte time numeric INT64 ko str mein export karta hai, dono accommodate karo
     try:
         ts_int: int | str = int(ts)
     except Exception as exc:
-        raise ValueError(f"Row {idx} – 'timestamp' must be int, got {ts!r}") from exc
+        raise ValueError(f"Row {idx} – 'timestamp' int hona chahiye, mila {ts!r}") from exc
 
     return repo_org, repo_name, before, ts_int
 
 
 def _gather_from_iter(input_org: str, rows: List[dict]) -> Dict[str, List[dict]]:
-    """Convert iterable rows into the internal repos mapping."""
+    """Iterable rows ko internal repos mapping mein convert karo."""
     repos: Dict[str, List[dict]] = defaultdict(list)
     for idx, row in enumerate(rows, 1):
         try:
@@ -157,33 +157,34 @@ def _gather_from_iter(input_org: str, rows: List[dict]) -> Dict[str, List[dict]]
 
         url = f"https://github.com/{repo_org}/{repo_name}"
         repos[url].append({"before": before, "date": ts_int})
-        if not repos:
-            terminate("Us user ke liye koi force-push events nahi mile – dataset empty hai")
-        return repos
+    
+    if not repos:
+        terminate("Us user ke liye koi force-push events nahi mile – dataset empty hai")
+    return repos
 def gather_commits(
     input_org: str,
     events_file: Optional[Path] | None = None,
     db_file: Optional[Path] | None = None,
 ) -> Dict[str, List[dict]]:
-    """Return mapping of repo URL → list[{before, pushed_at}].
+    """Repo URL → list[{before, pushed_at}] ka mapping return karo.
 
-    The data can be sourced either from:
-    1. A CSV export (``--events-file``)
-    2. The pre-built SQLite database downloaded via the Google Form (``--db-file``)
+    Data ya to yahan se source ho sakta hai:
+    1. CSV export (``--events-file``)
+    2. Google Form se download kiya gaya pre-built SQLite database (``--db-file``)
 
-    Both sources expose the columns: repo_org, repo_name, before, timestamp.
+    Dono sources mein ye columns expose hote hain: repo_org, repo_name, before, timestamp.
     """
 
     if events_file is not None:
         if not events_file.exists():
-            terminate(f"Events file not found: {events_file}")
+            terminate(f"Events file nahi mili: {events_file}")
         rows: List[dict] = []
         try:
             with events_file.open("r", encoding="utf-8", newline="") as fh:
                 reader = csv.DictReader(fh)
                 rows = list(reader)
         except Exception as exc:
-            terminate(f"Failed to parse events file {events_file}: {exc}")
+            terminate(f"Events file parse karne mein fail: {events_file}: {exc}")
 
         return _gather_from_iter(input_org, rows)
 
@@ -192,7 +193,7 @@ def gather_commits(
         terminate("Aapko --db-file ya --events-file supply karna hoga.")
 
     if not db_file.exists():
-        terminate(f"SQLite database not found: {db_file}")
+        terminate(f"SQLite database nahi mila: {db_file}")
 
     try:
         with sqlite3.connect(db_file) as conn:
@@ -208,7 +209,7 @@ def gather_commits(
             )
             rows = [dict(r) for r in cur.fetchall()]
     except Exception as exc:
-        terminate(f"Failed querying SQLite DB {db_file}: {exc}")
+        terminate(f"SQLite DB query karne mein fail: {db_file}: {exc}")
 
     return _gather_from_iter(input_org, rows)
 
@@ -222,16 +223,16 @@ def report(input_org: str, repos: Dict[str, List[dict]]) -> None:
     repo_count = len(repos)
     total_commits = sum(len(v) for v in repos.values())
 
-    print(f"\n{Fore.CYAN}======= Force-Push Summary for {input_org} ======={Style.RESET_ALL}")
-    print(f"{Fore.GREEN}Repos impacted : {repo_count}{Style.RESET_ALL}")
+    print(f"\n{Fore.CYAN}======= {input_org} ke liye Force-Push Summary ======={Style.RESET_ALL}")
+    print(f"{Fore.GREEN}Affected repos : {repo_count}{Style.RESET_ALL}")
     print(f"{Fore.GREEN}Total commits  : {total_commits}{Style.RESET_ALL}\n")
 
-    # per-repo counts
+    # har repo ke counts
     for repo_url, commits in repos.items():
         print(f"{Fore.YELLOW}{repo_url}{Style.RESET_ALL}: {len(commits)} commits")
     print()
 
-    # timeseries histogram (yearly) – include empty years
+    # timeseries histogram (yearly) – empty years bhi include karo
     counter = Counter(to_year(c["date"]) for commits in repos.values() for c in commits)
 
     if counter:
@@ -258,10 +259,9 @@ def report(input_org: str, repos: Dict[str, List[dict]]) -> None:
 ############################################################
 
 def _print_formatted_finding(finding: dict, repo_url: str) -> None:
-    """Pretty-print a single TruffleHog *finding* for humans. Similar to TruffleHog's CLI output.
-    """
+    """Humans ke liye ek single TruffleHog *finding* ko pretty-print karo. TruffleHog ke CLI output jaisa."""
     print(f"{Fore.GREEN}")
-    print(f"✅ Found verified result 🐷🔑")
+    print(f"✅ Verified result mila! 🐷🔑")
     print(f"Detector Type: {finding.get('DetectorName', 'N/A')}")
     print(f"Decoder Type: {finding.get('DecoderName', 'N/A')}")
 
@@ -275,42 +275,43 @@ def _print_formatted_finding(finding: dict, repo_url: str) -> None:
     print(f"Link: {repo_url}/commit/{finding.get('SourceMetadata', {}).get('Data', {}).get('Git', {}).get('commit')}")
     print(f"Timestamp: {finding.get('SourceMetadata', {}).get('Data', {}).get('Git', {}).get('timestamp')}")
 
-    # Flatten any extra metadata returned by the detector
+    # Detector se aaye extra metadata ko flatten karo
     extra = finding.get('ExtraData') or {}
     for k, v in extra.items():
         key_str = str(k).replace('_', ' ').title()
         print(f"{key_str}: {v}")
-    print(f"{Style.RESET_ALL}")  # Blank line as separator between findings
+    print(f"{Style.RESET_ALL}")  # Findings ke beech mein separator ke liye blank line
 
 
 def identify_base_commit(repo_path: Path, since_commit:str) -> str:
-    """Identify the base commit for the given repository and since_commit."""    # fetch the since_commit, since our clone process likely missed it
-    # note: this fetch will have no blobs, but that's fine b/c 
-    # when we invoke trufflehog, it calls git log -p, which will fetch the blobs dynamically
+    """Given repository aur since_commit ke liye base commit identify karo."""    
+    # since_commit fetch karo, kyunki hamara clone process use miss kar sakta hai
+    # note: is fetch mein koi blobs nahi honge, lekin ye fine hai kyunki 
+    # jab hum trufflehog invoke karte hain, to woh git log -p call karta hai, jo dynamically blobs fetch kar leta hai
     run(["git", "fetch", "origin", since_commit], cwd=repo_path)
-    # get all commits reachable from the since_commit
+    # since_commit se reachable saare commits get karo
     output = run(["git", "rev-list", since_commit], cwd=repo_path)
-    # working backwards from the since_commit, we need to find the first commit that exists in any branch
+    # since_commit se backwards work karte hue, pehla commit dhundo jo kisi branch mein exist karta hai
     for commit in output.splitlines():
-        #remove the newline character
+        # newline character remove karo
         commit = commit.strip('\n')
-        # Check if commit exists in any branch, if it does, we've found the base commit
+        # Check karo ki commit kisi branch mein exist karta hai, agar karta hai to hamara base commit mil gaya
         if run(["git", "branch", "--contains", commit, "--all"], cwd=repo_path):
             if commit != since_commit:
                 return commit
             try:
-                # if the commit is the same as the since_commit, we need to go back one commit to scan this commit
-                # if there is no commit~1, then since_commit is the base commit and we need "" for trufflehog
+                # agar commit same hai since_commit ke, to hume ek commit peeche jana hai is commit ko scan karne ke liye
+                # agar commit~1 nahi hai, to since_commit hi base commit hai aur hume trufflehog ke liye "" chahiye
                 c = run(["git", "rev-list", commit + "~1", "-n", "1"], cwd=repo_path)
                 return c.strip('\n')
-            except RunCmdError as err: # need to handle 128 git errors
+            except RunCmdError as err: # 128 git errors handle karne ke liye
                 return ""
         continue
-    # if we get here, then the since_commit is not in any branch
-    # which means it could be a force push of a whole new tree or similar
-    # in this case, we need to scan the entire branch, so we return ""
-    # note: The command below might be useful if we find an edge case 
-    #       not covered by "" in the future.
+    # agar yahan tak pahunche, to since_commit kisi branch mein nahi hai
+    # matlab ye kisi naye tree ka force push ho sakta hai ya similar
+    # is case mein hume puri branch scan karni hai, so "" return karte hain
+    # note: Neeche wala command future mein useful ho sakta hai agar koi edge case mile 
+    #       jo "" se cover nahi hota.
     #       c = run(["git", "rev-list", "--max-parents=0", 
     #           since_commit, "-n", "1"], cwd=repo_path)
     #       return c.strip('\n')
@@ -319,7 +320,7 @@ def identify_base_commit(repo_path: Path, since_commit:str) -> str:
 
 def scan_commits(repo_user: str, repos: Dict[str, List[dict]]) -> None:
     for repo_url, commits in repos.items():
-        print(f"\n[>] Scanning repo: {repo_url}")
+        print(f"\n[>] Repo scan kar rahe hain: {repo_url}")
 
         commit_counter = 0
         skipped_repo = False
@@ -328,7 +329,7 @@ def scan_commits(repo_user: str, repos: Dict[str, List[dict]]) -> None:
         try:
             tmp_path = Path(tmp_dir)
             try:
-                # Partial clone with no blobs to save space and for speed
+                # Blobs ke bina partial clone - space aur speed ke liye
                 run(
                     [
                         "git",
@@ -341,29 +342,29 @@ def scan_commits(repo_user: str, repos: Dict[str, List[dict]]) -> None:
                     cwd=tmp_path,
                 )
             except RunCmdError as err:
-                print(f"[!] git clone failed: {err} — skipping this repository")
+                print(f"[!] git clone fail ho gaya: {err} — is repository ko skip kar rahe hain")
                 skipped_repo = True
                 continue
 
             for c in commits:
                 before = c["before"]
                 if not _SHA_RE.fullmatch(before):
-                    print(f"  • Commit {before} – invalid SHA, skipping")
+                    print(f"  • Commit {before} – invalid SHA hai, skip kar rahe hain")
                     continue
                 commit_counter += 1
                 print(f"  • Commit {before}")
                 try:
                     since_commit = identify_base_commit(tmp_path, before)
                 except RunCmdError as err:
-                    # If the commit was logged in GH Archive, but not longer exists in the repo network, then it was likely manually removed it.
-                    # For more details, see: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository#:~:text=You%20cannot%20remove,rotating%20affected%20credentials.
+                    # Agar commit GH Archive mein logged tha, lekin ab repo network mein exist nahi karta, to likely manually remove kiya gaya hai
+                    # More details ke liye: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository#:~:text=You%20cannot%20remove,rotating%20affected%20credentials.
                     if "fatal: remote error: upload-pack: not our ref" in str(err):
-                        print("    This commit was likely manually removed from the repository network  — skipping commit")
+                        print("    Ye commit likely manually repository network se remove kar diya gaya hai — commit skip kar rahe hain")
                     else:
-                        print(f"    fetch/checkout failed: {err} — skipping commit")
+                        print(f"    fetch/checkout fail ho gaya: {err} — commit skip kar rahe hain")
                     continue
 
-                # Pass in the since_commit and branch values for trufflehog
+                # since_commit aur branch values trufflehog ko pass karo
                 findings = scan_with_trufflehog(tmp_path, since_commit=since_commit, branch=before)
                 
                 if findings:
@@ -373,17 +374,17 @@ def scan_commits(repo_user: str, repos: Dict[str, List[dict]]) -> None:
                     pass
 
         finally:
-            # Attempt cleanup but suppress ENOTEMPTY race-condition errors
+            # Cleanup ki koshish karo lekin ENOTEMPTY race-condition errors suppress karo
             try:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
             except OSError:
-                print(f"    Error cleaning up temporary directory: {tmp_dir}")
+                print(f"    Temporary directory clean karne mein error: {tmp_dir}")
                 pass
 
         if skipped_repo:
-            print("[!] Repo skipped due to earlier errors")
+            print("[!] Repo earlier errors ki wajah se skip hua")
         else:
-            print(f"[✓] {commit_counter} commits scanned.")
+            print(f"[✓] {commit_counter} commits scan ho gaye.")
 
 
 ############################################################
@@ -392,7 +393,7 @@ def scan_commits(repo_user: str, repos: Dict[str, List[dict]]) -> None:
 def main() -> None:
     args = parse_args()
 
-    # Configure logging
+    # Logging configure karo
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(message)s",
@@ -442,8 +443,8 @@ def parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
-    # Ensure required external tools are available early.
+    # Required external tools ki availability jaldi check karo
     for tool in ("git", "trufflehog"):
         if shutil.which(tool) is None:
-            terminate(f"Required tool '{tool}' not found in PATH")
+            terminate(f"Required tool '{tool}' PATH mein nahi mila")
     main()
