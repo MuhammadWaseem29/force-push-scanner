@@ -1,8 +1,8 @@
 # Contribution guidelines
 
-Please create an issue to collect feedback prior to feature additions. If possible try to keep PRs scoped to one feature, and add tests for new features. We use the fork-based contribution model described by [GitHub's documentation](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project). (In short: fork the `force-push-scanner` repo and open a PR back from your fork into our default branch.)
+Feature additions se pehle feedback collect karne ke liye please ek issue create karo. Agar possible ho to PRs ko ek feature tak scope rakhiye, aur naye features ke liye tests add karo. Hum fork-based contribution model use karte hain jo [GitHub ke documentation](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project) mein describe hai. (Short mein: `force-push-scanner` repo fork karo aur apne fork se hamare default branch mein PR open karo.)
 
-When showing interest in a bug, enhancement, PR, or issue, please use the thumbs up/thumbs down emoji on the original message rather than adding comments expressing the same.
+Jab kisi bug, enhancement, PR, ya issue mein interest show kar rahe ho, to original message pe thumbs up/thumbs down emoji use karo rather than same express karne wale comments add karne ke.
 
-Contributors need to [sign our CLA](https://cla-assistant.io/trufflesecurity/force-push-scanner) before we are able to accept contributions.
+Contributors ko hamara [CLA sign](https://cla-assistant.io/trufflesecurity/force-push-scanner) karna hoga before hum contributions accept kar saken.
 

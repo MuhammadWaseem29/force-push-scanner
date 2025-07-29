@@ -35,7 +35,7 @@ except ImportError:  # graceful degradation – no colors
 
 
 def terminate(msg: str) -> None:
-    """Exit the program with an error message (in red)."""
+    """Error message ke saath program exit karo (red mein)."""
     print(f"{Fore.RED}[✗] {msg}{Style.RESET_ALL}")
     sys.exit(1)
 
@@ -45,10 +45,10 @@ class RunCmdError(RuntimeError):
 
 
 def run(cmd: List[str], cwd: Path | None = None) -> str:
-    """Execute *cmd* and return its *stdout* as *str*.
+    """*cmd* execute karo aur uska *stdout* *str* mein return karo.
 
-    If the command exits non-zero, a ``RunCmdError`` is raised so callers can
-    decide whether to abort or ignore.
+    Agar command non-zero exit kare, to ``RunCmdError`` raise hota hai taki callers 
+    decide kar sake abort karna hai ya ignore karna hai.
     """
 
     logging.debug("Running command: %s (cwd=%s)", " ".join(cmd), cwd or ".")
@@ -157,11 +157,9 @@ def _gather_from_iter(input_org: str, rows: List[dict]) -> Dict[str, List[dict]]
 
         url = f"https://github.com/{repo_org}/{repo_name}"
         repos[url].append({"before": before, "date": ts_int})
-    if not repos:
-        terminate("No force-push events found for that user – dataset empty")
-    return repos
-
-
+        if not repos:
+            terminate("Us user ke liye koi force-push events nahi mile – dataset empty hai")
+        return repos
 def gather_commits(
     input_org: str,
     events_file: Optional[Path] | None = None,
@@ -191,7 +189,7 @@ def gather_commits(
 
     # 2. SQLite path
     if db_file is None:
-        terminate("You must supply --db-file or --events-file.")
+        terminate("Aapko --db-file ya --events-file supply karna hoga.")
 
     if not db_file.exists():
         terminate(f"SQLite database not found: {db_file}")
@@ -409,36 +407,36 @@ def main() -> None:
     if args.scan:
         scan_commits(args.input_org, repos)
     else:
-        print("[✓] Exiting without scan.")
+        print("[✓] Scan ke bina exit kar rahe hain.")
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse and return CLI arguments."""
+    """Parse aur return CLI arguments."""
     parser = argparse.ArgumentParser(
-        description="Inspect force-push commit events from public GitHub orgs and optionally scan their git diff patches for secrets.",
+        description="Public GitHub orgs se force-push commit events inspect karo aur optionally unke git diff patches mein secrets ke liye scan karo.",
     )
     parser.add_argument(
         "input_org",
-        help="GitHub username or organization to inspect",
+        help="GitHub username ya organization jo inspect karna hai",
     )
     parser.add_argument(
         "--scan",
         action="store_true",
-        help="Run a trufflehog scan on every force-pushed commit",
+        help="Har force-pushed commit pe trufflehog scan run karo",
     )
     parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
-        help="Enable verbose / debug logging",
+        help="Verbose / debug logging enable karo",
     )
     parser.add_argument(
         "--events-file",
-        help="Path to a CSV file containing force-push events. 4 columns: repo_org, repo_name, before, timestamp",
+        help="Force-push events contain karne wali CSV file ka path. 4 columns: repo_org, repo_name, before, timestamp",
     )
     parser.add_argument(
         "--db-file",
-        help="Path to the SQLite database containing force-push events. 4 columns: repo_org, repo_name, before, timestamp",
+        help="Force-push events contain karne wale SQLite database ka path. 4 columns: repo_org, repo_name, before, timestamp",
     )
     return parser.parse_args()
 
